@@ -1,12 +1,10 @@
+// ScheduledMaintenanceComponent.tsx
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import DashboardLayout from "@/components/dashboard-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/lib/supabaseClient";
 import { Eye } from "lucide-react";
 
@@ -32,9 +30,15 @@ interface Mechanic {
     surname: string;
 }
 
-export default function ScheduledMaintenancePage() {
-    const router = useRouter();
+interface ScheduledMaintenanceComponentProps {
+    visible: boolean;
+    onClose?: () => Promise<void>;
+}
 
+export default function ScheduledMaintenanceComponent({
+                                                          visible,
+                                                          onClose
+                                                      }: ScheduledMaintenanceComponentProps) {
     // States for tasks and filters
     const [tasks, setTasks] = useState<ScheduledMaintenance[]>([]);
     const [filterStatus, setFilterStatus] = useState<"open" | "completed">("open");
@@ -93,12 +97,11 @@ export default function ScheduledMaintenancePage() {
     };
 
     useEffect(() => {
-        fetchTasks();
-    }, [filterStatus, mechanicFilter, priorityFilter]);
-
-    useEffect(() => {
-        fetchMechanics();
-    }, []);
+        if (visible) {
+            fetchTasks();
+            fetchMechanics();
+        }
+    }, [visible, filterStatus, mechanicFilter, priorityFilter]);
 
     // Open the description modal popup
     const openDescModal = (description: string) => {
@@ -124,16 +127,22 @@ export default function ScheduledMaintenancePage() {
         }
     };
 
-    return (
-        <DashboardLayout>
-            <div className="container mx-auto p-4">
-                <div className="flex items-center justify-between mb-4">
-                    <h1 className="text-2xl font-bold">Scheduled Maintenance Tasks</h1>
-                    <Button variant="outline" onClick={() => router.push("/dashboard")}>
-                        Back to Dashboard
-                    </Button>
-                </div>
+    if (!visible) return null;
 
+    return (
+        <Card className="w-full shadow-md border-gray-200">
+            <CardHeader className="pb-2 flex justify-between items-center">
+                <CardTitle>Scheduled Maintenance Tasks</CardTitle>
+                {onClose && (
+                    <Button
+                        variant="outline"
+                        onClick={() => onClose().catch(console.error)}
+                    >
+                        Back to Chat
+                    </Button>
+                )}
+            </CardHeader>
+            <CardContent>
                 {/* Filter Controls */}
                 <div className="mb-4 space-y-4">
                     <div className="space-x-4">
@@ -188,9 +197,13 @@ export default function ScheduledMaintenancePage() {
                 </div>
 
                 {loading ? (
-                    <p>Loading tasks...</p>
+                    <div className="flex items-center justify-center h-64">
+                        <p>Loading tasks...</p>
+                    </div>
                 ) : tasks.length === 0 ? (
-                    <p>No tasks found.</p>
+                    <div className="flex items-center justify-center h-64">
+                        <p>No tasks found.</p>
+                    </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200 border">
@@ -226,7 +239,7 @@ export default function ScheduledMaintenancePage() {
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                             {tasks.map((task) => (
-                                <tr key={task.id}>
+                                <tr key={`task-${task.id}`}>
                                     <td className="px-4 py-2 whitespace-nowrap">
                                         {task.machine_type}
                                     </td>
@@ -270,7 +283,7 @@ export default function ScheduledMaintenancePage() {
                                         <td className="px-4 py-2 whitespace-nowrap">
                                             <Button
                                                 onClick={() => markCompleted(task)}
-                                                className="bg-green-600 hover:bg-green-700 text-white text-xs"
+                                                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
                                             >
                                                 Mark Completed
                                             </Button>
@@ -289,11 +302,11 @@ export default function ScheduledMaintenancePage() {
                         <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
                             <h2 className="text-xl font-bold mb-4">Task Description</h2>
                             <p className="text-sm text-gray-700 mb-6">{descModalContent}</p>
-                            <Button onClick={() => setShowDescModal(false)}>Close</Button>
+                            <Button onClick={() => setShowDescModal(false)} className="bg-emerald-600 hover:bg-emerald-700">Close</Button>
                         </div>
                     </div>
                 )}
-            </div>
-        </DashboardLayout>
+            </CardContent>
+        </Card>
     );
 }
